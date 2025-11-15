@@ -2,12 +2,19 @@ package ttlcache
 
 import (
 	"errors"
-	"ouchi/logger"
 	"sync"
 	"time"
 
+	"github.com/labstack/echo/v4"
 	"lukechampine.com/blake3"
 )
+
+type TtlCacheConfig struct {
+	Ttl     time.Duration
+	Tick    time.Duration
+	Headers map[string]string
+	Logger  Logger
+}
 
 type ChacheData struct {
 	eol  int64
@@ -17,24 +24,30 @@ type ChacheData struct {
 type TtlCache struct {
 	ttl      time.Duration
 	tick     time.Duration
+	headers  map[string]string
 	cacheMap sync.Map
 	eolMap   sync.Map
-	logger   logger.Logger
+	logger   Logger
 }
 
 var ErrNoSuchKey error = errors.New("no such key")
 var ErrExpired error = errors.New("ttl expired")
 
-func NewTtlCache(ttl time.Duration, tick time.Duration, logger logger.Logger) *TtlCache {
+func NewTtlCache(config TtlCacheConfig) *TtlCache {
 	c := &TtlCache{
-		ttl:      ttl,
-		tick:     tick,
+		ttl:      config.Ttl,
+		tick:     config.Tick,
+		headers:  config.Headers,
 		cacheMap: sync.Map{},
 		eolMap:   sync.Map{},
-		logger:   logger,
+		logger:   config.Logger,
 	}
 	c.startCleaning()
 	return c
+}
+
+func (c *TtlCache) Middleware() echo.MiddlewareFunc {
+
 }
 
 func (c *TtlCache) startCleaning() {

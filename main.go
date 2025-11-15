@@ -4,6 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"net/url"
+	"ouchi/ttlcache"
+	"path"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -11,17 +14,27 @@ import (
 )
 
 func main() {
-	originPort := flag.Uint("proxy", 8083, "origin port")
-	listenPort := flag.Uint("listen", 8084, "listen port")
-	headersConf := flag.String("headers", "headers.json", "headers configuration json file")
+	configPath := flag.String("config", "headers.json", "configuration json file")
 	flag.Parse()
+
+	config, err := ttlcache.ReadConfigFile(path.Clean(*configPath))
 
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Logger.SetLevel(log.INFO)
 	e.Logger.SetPrefix("OUCHI-CDN")
 
-	origin, err := url.Parse(fmt.Sprintf("http://localhost:%d", *originPort))
+	c := ttlcache.NewTtlCache(ttlcache.TtlCacheConfig{
+		Ttl:     time.Second * config.TtlSec,
+		Tick:    time.Second * config.TickSec,
+		Headers: config.Headers,
+		Logger:  e.Logger,
+	})
+	if err != nil {
+		e.Logger.Fatal(err)
+	}
+
+	origin, err := url.Parse(fmt.Sprintf("http://localhost:%d", config.OriginPort))
 	if err != nil {
 		e.Logger.Fatal(err)
 	}
@@ -35,9 +48,10 @@ func main() {
 	)
 
 	originGroup := e.Group("/*")
+	originGroup.Use(c.Middleware())
 	originGroup.Use(middleware.Proxy(originBalancer))
 
-	if err := e.Start(fmt.Sprintf("0.0.0.0:%d", *listenPort)); err != nil {
+	if err := e.Start(fmt.Sprintf("0.0.0.0:%d", config.ListenPort)); err != nil {
 		e.Logger.Error(err)
 	}
 }
