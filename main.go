@@ -13,6 +13,7 @@ import (
 func main() {
 	originPort := flag.Uint("proxy", 8083, "origin port")
 	listenPort := flag.Uint("listen", 8084, "listen port")
+	headersConf := flag.String("headers", "headers.json", "headers configuration json file")
 	flag.Parse()
 
 	e := echo.New()

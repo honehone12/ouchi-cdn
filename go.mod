@@ -3,6 +3,7 @@ module ouchi
 go 1.25.4
 
 require (
+	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/labstack/echo/v4 v4.13.4 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
@@ -14,4 +15,5 @@ require (
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
+	lukechampine.com/blake3 v1.4.1 // indirect
 )
