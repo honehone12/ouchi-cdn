@@ -46,8 +46,14 @@ func NewTtlCache(config TtlCacheConfig) *TtlCache {
 	return c
 }
 
-func (c *TtlCache) Middleware() echo.MiddlewareFunc {
+func (c *TtlCache) handler(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
 
+	}
+}
+
+func (c *TtlCache) Middleware() echo.MiddlewareFunc {
+	return c.handler
 }
 
 func (c *TtlCache) startCleaning() {
@@ -77,7 +83,7 @@ func (c *TtlCache) cleaning() {
 	}
 }
 
-func (c *TtlCache) Get(url string) (*ChacheData, error) {
+func (c *TtlCache) get(url string) (*ChacheData, error) {
 	k := blake3.Sum256([]byte(url))
 	v, ok := c.cacheMap.Load(k)
 	if !ok {
@@ -96,7 +102,7 @@ func (c *TtlCache) Get(url string) (*ChacheData, error) {
 	return d, nil
 }
 
-func (c *TtlCache) Set(url string, content []byte) {
+func (c *TtlCache) set(url string, content []byte) {
 	k := blake3.Sum256([]byte(url))
 	eol := time.Now().Add(c.ttl).Unix()
 	d := &ChacheData{
