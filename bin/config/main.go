@@ -14,8 +14,8 @@ func main() {
 		},
 		TtlSec:     900,
 		TickSec:    60,
-		OriginPort: 8083,
-		ListenPort: 8084,
+		OriginPort: 8082,
+		ListenPort: 8083,
 	}
 
 	b, err := json.MarshalIndent(config, "", "  ")

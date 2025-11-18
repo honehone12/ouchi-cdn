@@ -54,6 +54,7 @@ func (c *MemoryTtlCache) middlewareHandler(next echo.HandlerFunc) echo.HandlerFu
 			return err
 		}
 
+		c.logger.Debugf("using cached: %s", url)
 		c.setHeaders(ctx)
 		ctx.Response().Header().Set("XOuchCdn", "cached")
 		if err := ctx.Blob(
@@ -76,7 +77,12 @@ func (c *MemoryTtlCache) bodyDumpHandler(ctx echo.Context, req, res []byte) {
 	url := ctx.Request().URL.String()
 	contentType := ctx.Response().Header().Get("Content-Type")
 
+	cacheCtl := ctx.Response().Header().Get("Cache-Control")
+	if cacheCtl == "no-cache" || cacheCtl == "no-store" {
+		return
+	}
 	c.set(url, contentType, res)
+	c.logger.Debugf("cached: %s", url)
 }
 
 func (c *MemoryTtlCache) BodyDump() middleware.BodyDumpHandler {
@@ -93,6 +99,7 @@ func (c *MemoryTtlCache) clean(key, value any, now int64) bool {
 		c.logger.Debugf("deleting key: %d, value: %s", key, value)
 		c.eolMap.Delete(key)
 		c.cacheMap.Delete(value)
+		c.logger.Debugf("deleted: %s", value)
 	}
 
 	return true
@@ -102,6 +109,7 @@ func (c *MemoryTtlCache) cleaning() {
 	ticker := time.Tick(c.tick)
 
 	for now := range ticker {
+		c.logger.Debug("cleaning")
 		nowUnix := now.Unix()
 
 		c.eolMap.Range(func(k, v any) bool {
