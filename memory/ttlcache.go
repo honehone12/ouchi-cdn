@@ -2,6 +2,8 @@ package memory
 
 import (
 	"errors"
+	"hash"
+	"hash/fnv"
 	"io"
 	"net/http"
 	"ouchi/ttlcache"
@@ -9,7 +11,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"lukechampine.com/blake3"
 )
 
 type MemoryTtlCache struct {
@@ -20,6 +21,7 @@ type MemoryTtlCache struct {
 	cacheMap sync.Map
 	eolMap   sync.Map
 
+	hasher    hash.Hash
 	logger    ttlcache.Logger
 	transport http.RoundTripper
 }
@@ -33,6 +35,7 @@ func NewMemoryTtlCache(config ttlcache.TtlCacheConfig) *MemoryTtlCache {
 		cacheMap: sync.Map{},
 		eolMap:   sync.Map{},
 
+		hasher:    fnv.New128a(),
 		logger:    config.Logger,
 		transport: http.DefaultTransport,
 	}
@@ -149,7 +152,7 @@ func (c *MemoryTtlCache) cleaning() {
 }
 
 func (c *MemoryTtlCache) get(url string) (*ttlcache.ChacheData, error) {
-	k := blake3.Sum256([]byte(url))
+	k := c.hasher.Sum([]byte(url))
 	v, ok := c.cacheMap.Load(k)
 	if !ok {
 		return nil, ttlcache.ErrNoSuchKey
@@ -169,7 +172,7 @@ func (c *MemoryTtlCache) get(url string) (*ttlcache.ChacheData, error) {
 }
 
 func (c *MemoryTtlCache) set(url string, contentType string, content []byte) {
-	k := blake3.Sum256([]byte(url))
+	k := c.hasher.Sum([]byte(url))
 	eol := time.Now().Add(c.ttl).Unix()
 	d := &ttlcache.ChacheData{
 		Eol:         eol,
