@@ -9,9 +9,7 @@ import (
 
 func main() {
 	config := ttlcache.ConfigFile{
-		Headers: map[string]string{
-			"Cache-Control": "max-age=900",
-		},
+		Headers:    map[string]string{},
 		TtlSec:     900,
 		TickSec:    60,
 		OriginPort: 8082,
