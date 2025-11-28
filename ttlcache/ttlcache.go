@@ -20,9 +20,10 @@ type TtlCacheConfig struct {
 }
 
 type ChacheData struct {
-	Eol         int64
-	ContentType string
-	Data        []byte
+	Eol             int64
+	ContentType     string
+	ContentEncoding string
+	Data            []byte
 }
 
 var ErrNoSuchKey error = errors.New("no such key")

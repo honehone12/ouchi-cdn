@@ -69,7 +69,8 @@ func (c *MemoryTtlCache) setHeaders(ctx echo.Context) {
 
 func (c *MemoryTtlCache) cacheResponse(res *http.Response) error {
 	if res.StatusCode == http.StatusOK {
-		cacheControl := res.Header.Get("Cache-Control")
+		h := res.Header
+		cacheControl := h.Get("Cache-Control")
 		if cacheControl != "no-cache" && cacheControl != "no-store" {
 			defer res.Body.Close()
 			body, err := io.ReadAll(res.Body)
@@ -77,7 +78,12 @@ func (c *MemoryTtlCache) cacheResponse(res *http.Response) error {
 				return err
 			}
 
-			c.set(res.Request.URL.RequestURI(), res.Header.Get("Content-Type"), body)
+			c.set(
+				res.Request.URL.RequestURI(),
+				h.Get("Content-Type"),
+				h.Get("Content-Encoding"),
+				body,
+			)
 
 			// Set body again. better way ??
 			res.Body = io.NopCloser(bytes.NewReader(body))
@@ -113,18 +119,20 @@ func (c *MemoryTtlCache) middlewareHandler(next echo.HandlerFunc) echo.HandlerFu
 			return err
 		}
 
-		if err := ctx.Blob(
+		c.logger.Debugf("cached headers: %s, %s", cache.ContentType, cache.ContentEncoding)
+		h := ctx.Response().Header()
+		h.Set("XOuchCdn", "cached")
+		if len(cache.ContentEncoding) != 0 {
+			h.Set("Content-Encoding", cache.ContentEncoding)
+		}
+
+		c.setHeaders(ctx)
+
+		return ctx.Blob(
 			http.StatusOK,
 			cache.ContentType,
 			cache.Data,
-		); err != nil {
-			return err
-		}
-
-		ctx.Response().Header().Set("XOuchCdn", "cached")
-		c.setHeaders(ctx)
-
-		return nil
+		)
 	}
 }
 
@@ -180,15 +188,21 @@ func (c *MemoryTtlCache) get(url string) (*ttlcache.ChacheData, error) {
 	return d, nil
 }
 
-func (c *MemoryTtlCache) set(url string, contentType string, content []byte) {
+func (c *MemoryTtlCache) set(
+	url string,
+	contentType string,
+	contentEncoding string,
+	content []byte,
+) {
 	eol := time.Now().Add(c.ttl).Unix()
 	d := &ttlcache.ChacheData{
-		Eol:         eol,
-		ContentType: contentType,
-		Data:        content,
+		Eol:             eol,
+		ContentType:     contentType,
+		ContentEncoding: contentEncoding,
+		Data:            content,
 	}
 
 	c.cacheMap.Store(url, d)
 	c.eolMap.Store(eol, url)
-	c.logger.Debugf("cached: %s", url)
+	c.logger.Debugf("cached: %s %s %s", url, contentType, contentEncoding)
 }
