@@ -119,7 +119,6 @@ func (c *MemoryTtlCache) middlewareHandler(next echo.HandlerFunc) echo.HandlerFu
 			return err
 		}
 
-		c.logger.Debugf("cached headers: %s, %s", cache.ContentType, cache.ContentEncoding)
 		h := ctx.Response().Header()
 		h.Set("XOuchCdn", "cached")
 		if len(cache.ContentEncoding) != 0 {
@@ -204,5 +203,5 @@ func (c *MemoryTtlCache) set(
 
 	c.cacheMap.Store(url, d)
 	c.eolMap.Store(eol, url)
-	c.logger.Debugf("cached: %s %s %s", url, contentType, contentEncoding)
+	c.logger.Debugf("cached: %s, %s, %s", url, contentType, contentEncoding)
 }
