@@ -165,7 +165,7 @@ func (c *MemoryTtlCache) cleaning() {
 	ticker := time.Tick(c.tickSec)
 
 	for now := range ticker {
-		c.logger.Debug("cleaning")
+		c.logger.Debug("cleaning... now: %d", now)
 		nowMil := now.UnixMicro()
 
 		s, ok := c.eolMap.Load(0)
