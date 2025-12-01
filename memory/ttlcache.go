@@ -194,6 +194,11 @@ func (c *MemoryTtlCache) cleaning() {
 			c.cacheMap.Delete(v)
 			c.logger.Debugf("deleted: %s", v)
 		}
+
+		sorted = slices.DeleteFunc(sorted, func(eol int64) bool {
+			return eol < nowUnix
+		})
+		c.eolMap.Store(0, sorted)
 	}
 }
 
