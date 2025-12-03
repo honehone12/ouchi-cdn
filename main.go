@@ -14,12 +14,17 @@ import (
 )
 
 func main() {
+	debug := flag.Bool("debug", false, "use debug mode")
 	configPath := flag.String("config", "config.json", "configuration json file")
 	flag.Parse()
 
 	e := echo.New()
 	e.Use(middleware.Logger())
-	e.Logger.SetLevel(log.DEBUG)
+	if *debug {
+		e.Logger.SetLevel(log.DEBUG)
+	} else {
+		e.Logger.SetLevel(log.INFO)
+	}
 	e.Logger.SetPrefix("OUCH-CACHE")
 
 	config, err := ttlcache.ReadConfigFile(path.Clean(*configPath))
