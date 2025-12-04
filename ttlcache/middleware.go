@@ -14,10 +14,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func isWebSocketRequest(req *http.Request) bool {
-	return strings.ToLower(req.Header.Get("Upgrade")) == "websocket"
-}
-
 type TtlCache struct {
 	store    cache.ChacheStore
 	logger   log.Logger
@@ -82,17 +78,32 @@ func (c *TtlCache) onProxyResponse(res *http.Response) error {
 		h := res.Header
 		cacheControl := h.Get("Cache-Control")
 		if cacheControl != "no-cache" && cacheControl != "no-store" {
-			b, err := io.ReadAll(res.Body)
-			if err != nil {
-				return err
+			var b []byte
+			var err error
+			contentType := h.Get("Content-Type")
+			contentEncoding := h.Get("Content-Encoding")
+			if (strings.Contains(contentType, "text") ||
+				strings.Contains(contentType, "application")) &&
+				len(contentEncoding) == 0 {
+
+				b, err = compress(res.Body)
+				if err != nil {
+					return err
+				}
+
+				contentEncoding = "gzip"
+				h.Set("Content-Encoding", contentEncoding)
+			} else {
+				b, err = io.ReadAll(res.Body)
+				if err != nil {
+					return err
+				}
 			}
-			// close now to set new body
-			res.Body.Close()
 
 			if err := c.store.Set(
 				res.Request.URL.RequestURI(),
-				h.Get("Content-Type"),
-				h.Get("Content-Encoding"),
+				contentType,
+				contentEncoding,
 				b,
 			); err != nil {
 				return err
@@ -108,15 +119,6 @@ func (c *TtlCache) onProxyResponse(res *http.Response) error {
 func (c *TtlCache) middlewareHandler(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		req := ctx.Request()
-
-		// webSocket requests bypass cache and go directly to proxy
-		if isWebSocketRequest(req) {
-			c.logger.Infof("proxy websocket: %s", req.URL.String())
-			req.Host = c.proxyUrl.Hostname()
-			c.proxy.ServeHTTP(ctx.Response(), req)
-			c.setHeaders(ctx, "", false)
-			return nil
-		}
 
 		d, err := c.store.Get(req.URL.RequestURI())
 		// cache miss - proxy the request
