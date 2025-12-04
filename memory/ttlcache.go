@@ -69,10 +69,26 @@ func (c *MemoryTtlCache) hashKey(key string) (string, error) {
 	return hash, nil
 }
 
-func (c *MemoryTtlCache) setHeaders(ctx echo.Context) {
+func (c *MemoryTtlCache) setHeaders(
+	ctx echo.Context,
+	/* or receive map[string]string */
+	contentEncoding string,
+	cached bool,
+) {
 	headers := ctx.Response().Header()
+
 	for k, v := range c.headers {
 		headers.Set(k, v)
+	}
+
+	if len(contentEncoding) != 0 {
+		headers.Set("Content-Encoding", contentEncoding)
+	}
+
+	if cached {
+		headers.Set("XOuchiCache", "cachd")
+	} else {
+		headers.Set("XOuchiCache", "miss")
 	}
 }
 
@@ -97,7 +113,6 @@ func (c *MemoryTtlCache) onProxyResponse(res *http.Response) error {
 
 			// Set body again. better way ??
 			res.Body = io.NopCloser(bytes.NewReader(body))
-			res.Header.Set("XOuchCdn", "miss")
 		}
 	}
 
@@ -127,7 +142,7 @@ func (c *MemoryTtlCache) middlewareHandler(next echo.HandlerFunc) echo.HandlerFu
 			c.logger.Infof("proxy websocket: %s", req.URL.String())
 			req.Host = c.proxyUrl.Hostname()
 			c.proxy.ServeHTTP(ctx.Response(), req)
-			c.setHeaders(ctx)
+			c.setHeaders(ctx, "", false)
 			return nil
 		}
 
@@ -137,19 +152,13 @@ func (c *MemoryTtlCache) middlewareHandler(next echo.HandlerFunc) echo.HandlerFu
 			c.logger.Debug(err)
 			req.Host = c.proxyUrl.Hostname()
 			c.proxy.ServeHTTP(ctx.Response(), req)
-			c.setHeaders(ctx)
+			c.setHeaders(ctx, "", false)
 			return nil
 		} else if err != nil {
 			return err
 		}
 
-		h := ctx.Response().Header()
-		h.Set("XOuchCdn", "cached")
-		if len(cache.ContentEncoding) != 0 {
-			h.Set("Content-Encoding", cache.ContentEncoding)
-		}
-
-		c.setHeaders(ctx)
+		c.setHeaders(ctx, cache.ContentEncoding, true)
 
 		return ctx.Blob(
 			http.StatusOK,
