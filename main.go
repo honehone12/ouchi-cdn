@@ -6,6 +6,7 @@ import (
 	"ouchi/memory"
 	"ouchi/ttlcache"
 	"path"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -33,8 +34,8 @@ func main() {
 
 	store := memory.NewMemoryStore(
 		e.Logger,
-		config.TickSec,
-		config.TtlSec,
+		time.Second*config.TickSec,
+		time.Second*config.TtlSec,
 	)
 
 	cache, err := ttlcache.NewTtlCache(

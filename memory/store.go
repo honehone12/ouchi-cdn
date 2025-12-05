@@ -44,7 +44,7 @@ func (m *MemoryStore) cleaning() {
 	ticker := time.Tick(m.tickSec)
 
 	for t := range ticker {
-		m.logger.Debugf("cleaning... now: %d", t)
+		m.logger.Debugf("cleaning... now: %s", t)
 		now := t.Unix()
 
 		s, ok := m.cacheMap.Load(EOL_DATA_KEY)

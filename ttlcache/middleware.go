@@ -95,7 +95,7 @@ func (c *TtlCache) onProxyResponse(res *http.Response) error {
 			res.Body = io.NopCloser(bytes.NewReader(b))
 		}
 
-		h.Set("XOuchiCache", "miss")
+		h.Set("X-Ouchi-Cache", "miss")
 		c.setConfiguredHeaders(h)
 	}
 
@@ -109,7 +109,7 @@ func (c *TtlCache) middlewareHandler(next echo.HandlerFunc) echo.HandlerFunc {
 		d, err := c.store.Get(req.URL.RequestURI())
 		// cache miss - proxy the request
 		if errors.Is(err, cache.ErrNoSuchKey) || errors.Is(err, cache.ErrExpired) {
-			c.logger.Debug(err)
+			c.logger.Debug("not stored", err)
 			req.Host = c.proxyUrl.Hostname()
 			res := ctx.Response()
 			c.proxy.ServeHTTP(res, req)
@@ -119,7 +119,7 @@ func (c *TtlCache) middlewareHandler(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		h := ctx.Response().Header()
-		h.Set("XOuchiCache", "cached")
+		h.Set("X-Ouchi-Cache", "cached")
 		if len(d.ContentEncoding) != 0 {
 			h.Set("Content-Encoding", d.ContentEncoding)
 		}
