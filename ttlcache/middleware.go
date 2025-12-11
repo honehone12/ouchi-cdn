@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"ouchi/cache"
 	"ouchi/log"
-	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -61,32 +60,15 @@ func (c *TtlCache) onProxyResponse(res *http.Response) error {
 		h := res.Header
 		cacheControl := h.Get("Cache-Control")
 		if cacheControl != "no-cache" && cacheControl != "no-store" {
-			var b []byte
-			var err error
 			contentType := h.Get("Content-Type")
-			contentEncoding := h.Get("Content-Encoding")
-			if (strings.Contains(contentType, "text") ||
-				strings.Contains(contentType, "application")) &&
-				len(contentEncoding) == 0 {
-
-				b, err = compress(res.Body)
-				if err != nil {
-					return err
-				}
-
-				contentEncoding = "gzip"
-				h.Set("Content-Encoding", contentEncoding)
-			} else {
-				b, err = io.ReadAll(res.Body)
-				if err != nil {
-					return err
-				}
+			b, err := io.ReadAll(res.Body)
+			if err != nil {
+				return err
 			}
 
 			if err := c.store.Set(
 				res.Request.URL.RequestURI(),
 				contentType,
-				contentEncoding,
 				b,
 			); err != nil {
 				return err
@@ -120,9 +102,6 @@ func (c *TtlCache) middlewareHandler(next echo.HandlerFunc) echo.HandlerFunc {
 
 		h := ctx.Response().Header()
 		h.Set("X-Ouchi-Cache", "cached")
-		if len(d.ContentEncoding) != 0 {
-			h.Set("Content-Encoding", d.ContentEncoding)
-		}
 		c.setConfiguredHeaders(h)
 
 		return ctx.Blob(

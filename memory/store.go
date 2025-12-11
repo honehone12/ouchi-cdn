@@ -103,15 +103,13 @@ func (m *MemoryStore) Get(url string) (*cache.ChacheData, error) {
 func (m *MemoryStore) Set(
 	url string,
 	contentType string,
-	contentEncoding string,
 	content []byte,
 ) error {
 	eol := time.Now().Add(m.ttlSec).Unix()
 	d := &cache.ChacheData{
-		Eol:             eol,
-		ContentType:     contentType,
-		ContentEncoding: contentEncoding,
-		Data:            content,
+		Eol:         eol,
+		ContentType: contentType,
+		Data:        content,
 	}
 
 	hash, err := cache.HashKey(url)
@@ -140,7 +138,6 @@ func (m *MemoryStore) Set(
 		"cached: [url] %s, [type] %s, [enc] %s, [hash] %s",
 		url,
 		contentType,
-		contentEncoding,
 		hash,
 	)
 	return nil

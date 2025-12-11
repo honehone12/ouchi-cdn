@@ -8,16 +8,14 @@ type ChacheStore interface {
 		url string,
 		/* or receive map[string]string */
 		contentType string,
-		contentEncoding string,
 		content []byte,
 	) error
 }
 
 type ChacheData struct {
-	Eol             int64
-	ContentType     string
-	ContentEncoding string
-	Data            []byte
+	Eol         int64
+	ContentType string
+	Data        []byte
 }
 
 type EolData struct {
